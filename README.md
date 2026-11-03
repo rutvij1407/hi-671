@@ -1,5 +1,7 @@
 **Healthcare Claims Analysis in SQL (HI 671)**
 
+Live site: https://hi671-query-results.vercel.app
+
 SQL analysis of patient, claims and diagnosis tables, written for a health informatics course at George Mason University.
 
 **The problem**
