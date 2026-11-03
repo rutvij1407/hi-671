@@ -8,8 +8,21 @@ import duckdb
 import pandas as pd
 import random
 from datetime import datetime, timedelta
+import os
 import warnings
 warnings.filterwarnings('ignore')
+
+
+def show(df):
+    """Print a result as a console table, or as tab separated rows when build_site.py asks for them."""
+    if os.environ.get("HI671_TSV"):
+        print("@@TABLE")
+        print("\t".join(str(c) for c in df.columns))
+        for row in df.itertuples(index=False):
+            print("\t".join("" if (isinstance(v, float) and v != v) else str(v) for v in row))
+        print("@@END")
+    else:
+        print(df.to_string(index=False))
 
 con = duckdb.connect(':memory:')
 
@@ -246,7 +259,7 @@ print("=" * 70)
 
 print("\n--- Part 1, Step 1: CCS Table (Top 10 rows) ---")
 result = con.execute("SELECT * FROM CCS LIMIT 10").fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 1, Step 2: clean table joined with CCS (Top 10 rows) ---")
 result = con.execute("""
@@ -263,7 +276,7 @@ LEFT JOIN CCS ccs
     ON c.icd9 = ccs.ICD9_Code
 LIMIT 10
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 # Create clean_with_CCS
 con.execute("""
@@ -287,7 +300,7 @@ SELECT COUNT(DISTINCT id) AS Patients_With_Hyperlipidemia
 FROM clean_with_CCS
 WHERE icd9 IN ('272.2', '272.4')
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 # Create clean_no_hyperlipidemia
 con.execute("""
@@ -304,7 +317,7 @@ WHERE hyper.id IS NULL
 
 print("\n--- Part 1, Step 3: Remaining patients after excluding hyperlipidemia ---")
 result = con.execute("SELECT COUNT(DISTINCT id) AS Remaining_Patients FROM clean_no_hyperlipidemia").fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 1, Step 3: Confirm no hyperlipidemia remains (should be 0) ---")
 result = con.execute("""
@@ -312,7 +325,7 @@ SELECT COUNT(DISTINCT id) AS Should_Be_Zero
 FROM clean_no_hyperlipidemia
 WHERE icd9 IN ('272.2', '272.4')
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 # ============================================================
 # PART 2
@@ -325,15 +338,15 @@ print("=" * 70)
 print("\n--- Part 2, Step 1: Table previews ---")
 print("\nptid table (TOP 5):")
 result = con.execute("SELECT * FROM ptid LIMIT 5").fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\nclaims table (TOP 5):")
 result = con.execute("SELECT * FROM claims LIMIT 5").fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\nicd table (TOP 5):")
 result = con.execute("SELECT * FROM icd LIMIT 5").fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 2: Patients with Diabetes (ICD9 codes starting with 250) ---")
 result = con.execute("""
@@ -349,7 +362,7 @@ INNER JOIN icd i ON c.icd9 = i.icd9
 WHERE c.icd9 LIKE '250%'
 ORDER BY p.ptid
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 2: Count of Diabetes Patients ---")
 result = con.execute("""
@@ -358,7 +371,7 @@ FROM ptid p
 INNER JOIN claims c ON p.ptid = c.ptid
 WHERE c.icd9 LIKE '250%'
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 3: Average cost per diagnosis (cost >= 2.0), sorted most to least expensive ---")
 result = con.execute("""
@@ -373,7 +386,7 @@ WHERE c.cost >= 2.0
 GROUP BY c.icd9, i.DESCRIPTION
 ORDER BY Average_Cost DESC
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 4: Diabetes prevalence by gender ---")
 result = con.execute("""
@@ -393,7 +406,7 @@ LEFT JOIN claims c ON p.ptid = c.ptid
 GROUP BY p.gender
 ORDER BY Diabetes_Percentage DESC
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 5: Top 2 months with most diagnoses reported ---")
 result = con.execute("""
@@ -406,7 +419,7 @@ GROUP BY EXTRACT(MONTH FROM CAST(date AS DATE)), strftime(CAST(date AS DATE), '%
 ORDER BY Total_Diagnoses DESC
 LIMIT 2
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 6: ICD codes with multiple descriptions (errors in RevisedICD9) ---")
 result = con.execute("""
@@ -418,7 +431,7 @@ GROUP BY ICD
 HAVING COUNT(DISTINCT ICD_Desc) > 1
 ORDER BY ICD
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n--- Part 2, Step 6: Conflicting descriptions for each error ---")
 result = con.execute("""
@@ -433,7 +446,7 @@ INNER JOIN RevisedICD9 b
 GROUP BY a.ICD, a.ICD_Desc, b.ICD_Desc
 ORDER BY a.ICD
 """).fetchdf()
-print(result.to_string(index=False))
+show(result)
 
 print("\n" + "=" * 70)
 print("ALL QUERIES COMPLETED SUCCESSFULLY")
